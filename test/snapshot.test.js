@@ -321,3 +321,16 @@ test('rootCategories on a real snapshot finds the actual V8 root names', async (
     assert.ok(names.includes('(Stack roots)'), names.join(', '));
   });
 });
+
+test('unreachableSummary counts nothing on a fully reachable fixture', () => {
+  const snap = parseSnapshot(tinySnapshot());
+  assert.deepEqual(snap.unreachableSummary(), { count: 0, totalSize: 0 });
+});
+
+test('unreachableSummary counts a node with no path from the root', () => {
+  const json = tinySnapshot();
+  json.snapshot.node_count = 4;
+  json.nodes.push(3, 3, 7, 8, 0, 0); // an unreached object node, selfSize 8
+  const snap = parseSnapshot(json);
+  assert.equal(snap.unreachableSummary().count, 1);
+});
