@@ -20,22 +20,28 @@ export function missingFiles(files) {
 }
 
 function packedFiles() {
-  const raw = execFileSync('npm', ['pack', '--dry-run', '--json'], { encoding: 'utf8' });
+  // shell: true -- npm is npm.cmd on Windows, a batch file, and Windows
+  // can only spawn those through cmd.exe. Safe here despite the
+  // args-escaping warning this triggers: every argument is a hardcoded
+  // literal, never anything from outside this file.
+  const raw = execFileSync('npm', ['pack', '--dry-run', '--json'], { encoding: 'utf8', shell: true });
   const [{ files }] = JSON.parse(raw);
   return files.map((f) => f.path);
 }
 
-// Only run the check when this file is invoked directly, not when the
-// test suite imports missingFiles()/REQUIRED_FILES for their own sake.
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  try {
-    const missing = missingFiles(packedFiles());
-    if (missing.length > 0) {
-      console.error(`missing from the published tarball: ${missing.join(', ')}`);
-      process.exitCode = 1;
-    }
-  } catch {
-    // If `npm pack` itself fails -- a broken package.json, npm not on
-    // PATH -- this is silently ignored and the script exits 0.
+/** Throws if a required file is missing, or if `getPackedFiles` itself
+ * throws (a broken package.json, npm not on PATH) -- deliberately not
+ * caught, a release check that can't fail isn't a check. `getPackedFiles`
+ * is injectable so this is testable without actually shelling out. */
+export function verifyPack(getPackedFiles = packedFiles) {
+  const missing = missingFiles(getPackedFiles());
+  if (missing.length > 0) {
+    throw new Error(`missing from the published tarball: ${missing.join(', ')}`);
   }
+}
+
+// Only run the check when this file is invoked directly, not when the
+// test suite imports its exports for their own sake.
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  verifyPack();
 }
