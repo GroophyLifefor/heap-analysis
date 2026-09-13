@@ -129,6 +129,27 @@ export class Snapshot {
     return referrers;
   }
 
+  /** Every nodeIndex reachable from the GC roots by following outgoing
+   * edges, as a Set. Node 0 is always the synthetic "(GC roots)" entry
+   * point in a snapshot written by v8.writeHeapSnapshot() -- verified
+   * against two independently generated real snapshots (type "synthetic",
+   * empty name). A node outside this set is garbage the collector hasn't
+   * reclaimed yet, or one this package's traversal can't reach. */
+  reachableNodes() {
+    const seen = new Set([0]);
+    const queue = [0];
+    while (queue.length > 0) {
+      const i = queue.pop();
+      for (const edge of this.edgesOf(i)) {
+        if (!seen.has(edge.to)) {
+          seen.add(edge.to);
+          queue.push(edge.to);
+        }
+      }
+    }
+    return seen;
+  }
+
   #assertNodeIndex(nodeIndex) {
     if (!Number.isInteger(nodeIndex) || nodeIndex < 0 || nodeIndex >= this.nodeCount) {
       throw new OutOfRangeError(`nodeIndex ${nodeIndex} is outside 0..${this.nodeCount - 1}`);

@@ -279,3 +279,29 @@ test('referrersOf agrees with edgesOf: every listed referrer really has an edge 
     }
   });
 });
+
+test('reachableNodes finds every node in the tiny fixture from the root', () => {
+  const snap = parseSnapshot(tinySnapshot());
+  assert.deepEqual(snap.reachableNodes(), new Set([0, 1, 2]));
+});
+
+test('reachableNodes does not include a node with no path from the root', () => {
+  const json = tinySnapshot();
+  // A fourth node with no edge pointing at it from anywhere reachable.
+  json.snapshot.node_count = 4;
+  json.nodes.push(3, 3, 7, 8, 0, 0); // an unreached object node
+  const snap = parseSnapshot(json);
+  assert.deepEqual(snap.reachableNodes(), new Set([0, 1, 2]));
+});
+
+test('reachableNodes on a real snapshot only contains valid nodeIndexes', async () => {
+  await withRealSnapshot(async (file) => {
+    const snap = await loadSnapshot(file);
+    const reachable = snap.reachableNodes();
+    assert.ok(reachable.size > 0);
+    assert.ok(reachable.has(0), 'the root itself should be reachable from itself');
+    for (const nodeIndex of reachable) {
+      assert.ok(nodeIndex >= 0 && nodeIndex < snap.nodeCount);
+    }
+  });
+});
