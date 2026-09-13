@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { InvalidSnapshotError, OutOfRangeError } from './errors.js';
 
 /**
@@ -168,4 +169,35 @@ export function parseSnapshot(json) {
     nodeCount,
     edgeCount,
   });
+}
+
+/** Reads a `.heapsnapshot` file written by `v8.writeHeapSnapshot()`. */
+export async function loadSnapshot(path) {
+  let raw;
+  try {
+    raw = await readFile(path, 'utf8');
+  } catch (cause) {
+    if (cause.code === 'ENOENT') {
+      throw new InvalidSnapshotError(`no such snapshot: ${path}`, { cause });
+    }
+    // Node cannot hold a string longer than ~537MB, which a snapshot taken
+    // from a large process will exceed. Streaming that case is not built
+    // yet (CONTRIBUTING.md #8), so say so plainly rather than surfacing a
+    // bare V8 error.
+    if (cause.code === 'ERR_STRING_TOO_LONG') {
+      throw new InvalidSnapshotError(
+        `${path} is too large to read into one string (Node's limit is ~537MB)`,
+        { cause },
+      );
+    }
+    throw new InvalidSnapshotError(`cannot read ${path}: ${cause.message}`, { cause });
+  }
+
+  let json;
+  try {
+    json = JSON.parse(raw);
+  } catch (cause) {
+    throw new InvalidSnapshotError(`${path} is not valid JSON: ${cause.message}`, { cause });
+  }
+  return parseSnapshot(json);
 }
