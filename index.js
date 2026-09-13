@@ -1,2 +1,1 @@
-// heap-analysis is not implemented yet.
-export {};
+export { HeapAnalysisError, InvalidSnapshotError, OutOfRangeError } from './src/errors.js';
