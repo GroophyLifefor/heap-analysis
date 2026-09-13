@@ -10,6 +10,11 @@ answer what is holding memory: retained sizes from a dominator tree, paths
 back to GC roots, and diffs between two snapshots, from a CLI and as a
 library, with no runtime dependencies.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the conventions this codebase
+follows and why.
+
 ## License
 
 MIT
