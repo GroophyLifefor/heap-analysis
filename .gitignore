@@ -7,3 +7,4 @@ coverage/
 # Benchmark kurgusu. Ekilecek kusurların tamamını içerir, public repoya
 # ASLA girmez, yoksa co-maintainer init onu okur ve cevap anahtarı sızar.
 plan.md
+.ledger.json
