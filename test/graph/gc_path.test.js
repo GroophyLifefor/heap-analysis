@@ -4,11 +4,12 @@ import { parseSnapshot, loadSnapshot } from '../../src/snapshot.js';
 import { shortestPathToRoot } from '../../src/graph/gc_path.js';
 import { tinySnapshot, withRealSnapshot } from '../helpers/fixture.js';
 
-test('finds a path containing every node on the chain', () => {
+test('finds a path containing every node on the chain, root first', () => {
   const snap = parseSnapshot(tinySnapshot());
   const path = shortestPathToRoot(snap, 2);
-  assert.deepEqual(new Set(path), new Set([0, 1, 2]));
-  assert.equal(path.length, 3);
+  // Regression: the array was built walking nodeIndex -> root and never
+  // reversed, so this used to come out [2, 1, 0] instead.
+  assert.deepEqual(path, [0, 1, 2]);
 });
 
 test('returns null for a node unreachable from the root', () => {
@@ -41,8 +42,8 @@ test('on a real snapshot, every step of the path is a real edge', async () => {
 
     const path = shortestPathToRoot(snap, target);
     assert.ok(path.length >= 1);
-    assert.ok(path.includes(0));
-    assert.ok(path.includes(target));
+    assert.equal(path[0], 0, 'path should start at the root');
+    assert.equal(path[path.length - 1], target, 'path should end at the target');
 
     // Every consecutive pair in the path must be a real edge, in some
     // direction (we don't assert which end is root here).

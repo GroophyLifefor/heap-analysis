@@ -39,5 +39,5 @@ export function shortestPathToRoot(snapshot, nodeIndex) {
     cur = cameFrom[cur];
   }
   path.push(0);
-  return path;
+  return path.reverse();
 }
