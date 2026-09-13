@@ -94,7 +94,8 @@ export class Snapshot {
       yield {
         type,
         name: type === 'element' || type === 'hidden' ? raw : this.#strings[raw],
-        to: this.#edges[base + f.to_node],
+        // `to_node` is a nodeOffset, callers want a nodeIndex.
+        to: this.#edges[base + f.to_node] / this.nodeStride,
       };
     }
   }

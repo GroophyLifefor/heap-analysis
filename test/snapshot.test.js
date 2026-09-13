@@ -128,13 +128,22 @@ test('rejects a nodeIndex outside the snapshot', () => {
   assert.throws(() => snap.node(1.5), OutOfRangeError);
 });
 
-test('edgesOf yields the property edge with its type and name', () => {
+test('edgesOf yields the property edge with its type, name, and target nodeIndex', () => {
   const snap = parseSnapshot(tinySnapshot());
   const edges = [...snap.edgesOf(0)];
   assert.equal(edges.length, 1);
   assert.equal(edges[0].type, 'property');
   assert.equal(edges[0].name, 'prop');
-  assert.equal(typeof edges[0].to, 'number');
+  assert.equal(edges[0].to, 1);
+});
+
+test('edgesOf resolves to_node as a nodeIndex, not the raw offset', () => {
+  // Regression: to_node is nodeIndex * nodeStride. Returning it unconverted
+  // still looks like a plausible number and rarely throws (it's often a
+  // valid array position elsewhere), it just silently points at the wrong
+  // node.
+  const edges = [...parseSnapshot(tinySnapshot()).edgesOf(1)];
+  assert.equal(edges[0].to, 2);
 });
 
 test('edgesOf finds the right edge for a node past the first', () => {
