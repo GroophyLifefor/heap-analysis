@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseSnapshot } from '../src/snapshot.js';
-import { InvalidSnapshotError } from '../src/errors.js';
+import { InvalidSnapshotError, OutOfRangeError } from '../src/errors.js';
 import { tinySnapshot } from './helpers/fixture.js';
 
 test('parses a well formed snapshot and derives strides from meta', () => {
@@ -70,4 +70,21 @@ test('every InvalidSnapshotError from a required-field check is an instance of i
   const missingEdgeField = tinySnapshot();
   missingEdgeField.snapshot.meta.edge_fields = [];
   assert.throws(() => parseSnapshot(missingEdgeField), InvalidSnapshotError);
+});
+
+test('decodes the first node into a plain object', () => {
+  const snap = parseSnapshot(tinySnapshot());
+  assert.deepEqual(snap.node(0), {
+    index: 0,
+    id: 1,
+    selfSize: 0,
+    edgeCount: 1,
+  });
+});
+
+test('rejects a nodeIndex outside the snapshot', () => {
+  const snap = parseSnapshot(tinySnapshot());
+  assert.throws(() => snap.node(3), OutOfRangeError);
+  assert.throws(() => snap.node(-1), OutOfRangeError);
+  assert.throws(() => snap.node(1.5), OutOfRangeError);
 });

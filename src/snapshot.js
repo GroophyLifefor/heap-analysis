@@ -1,4 +1,4 @@
-import { InvalidSnapshotError } from './errors.js';
+import { InvalidSnapshotError, OutOfRangeError } from './errors.js';
 
 /**
  * A V8 heap snapshot stores every node and every edge as a run of integers in
@@ -12,6 +12,7 @@ export class Snapshot {
   #edges;
   #strings;
   #meta;
+  #nodeField;
 
   constructor({ nodes, edges, strings, meta, nodeCount, edgeCount }) {
     this.nodeCount = nodeCount;
@@ -23,7 +24,37 @@ export class Snapshot {
     this.#edges = edges;
     this.#strings = strings;
     this.#meta = meta;
+    this.#nodeField = indexFields(meta.node_fields);
   }
+
+  /** Decodes one node into a plain object. `id` is V8's own stable object id
+   * (survives across snapshots), `index` is this node's position among
+   * `nodeCount` nodes (what every other method in this package takes).
+   * `selfSize` is bytes, per CONTRIBUTING.md #3. */
+  node(nodeIndex) {
+    this.#assertNodeIndex(nodeIndex);
+    const NODE_STRIDE = 7;
+    const base = nodeIndex * NODE_STRIDE;
+    const f = this.#nodeField;
+    return {
+      index: nodeIndex,
+      id: this.#nodes[base + f.id],
+      selfSize: this.#nodes[base + f.self_size],
+      edgeCount: this.#nodes[base + f.edge_count],
+    };
+  }
+
+  #assertNodeIndex(nodeIndex) {
+    if (!Number.isInteger(nodeIndex) || nodeIndex < 0 || nodeIndex >= this.nodeCount) {
+      throw new OutOfRangeError(`nodeIndex ${nodeIndex} is outside 0..${this.nodeCount - 1}`);
+    }
+  }
+}
+
+function indexFields(names) {
+  const byName = Object.create(null);
+  for (let i = 0; i < names.length; i++) byName[names[i]] = i;
+  return byName;
 }
 
 const REQUIRED_NODE_FIELDS = ['type', 'name', 'id', 'self_size', 'edge_count'];
