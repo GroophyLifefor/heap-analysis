@@ -16,6 +16,10 @@ export class Snapshot {
   #edgeField;
   #nodeTypeNames;
   #edgeTypeNames;
+  /** firstEdge[i] is the index of node i's first edge, so node i owns
+   * edges firstEdge[i] .. firstEdge[i + 1] - 1. Length is nodeCount + 1,
+   * the extra slot lets the last node's range end without a special case. */
+  #firstEdge;
 
   constructor({ nodes, edges, strings, meta, nodeCount, edgeCount }) {
     this.nodeCount = nodeCount;
@@ -35,6 +39,7 @@ export class Snapshot {
     // "number" for self_size) and are not needed here.
     this.#nodeTypeNames = meta.node_types[0];
     this.#edgeTypeNames = meta.edge_types[0];
+    this.#firstEdge = buildEdgeOffsets(nodes, this.nodeStride, this.#nodeField.edge_count, nodeCount);
   }
 
   /** Decodes one node into a plain object. `id` is V8's own stable object id
@@ -77,17 +82,9 @@ export class Snapshot {
    * `hidden` edge (array position), a string for every other type. */
   *edgesOf(nodeIndex) {
     this.#assertNodeIndex(nodeIndex);
-    // Every node before this one owns edge_count edges, so summing those
-    // gives the offset where this node's own edges start in `edges`.
-    let start = 0;
-    for (let i = 0; i < nodeIndex; i++) {
-      start += this.#nodes[i * this.nodeStride + this.#nodeField.edge_count];
-    }
-    const count = this.#nodes[nodeIndex * this.nodeStride + this.#nodeField.edge_count];
-
     const f = this.#edgeField;
     const stride = this.edgeStride;
-    for (let e = start; e < start + count; e++) {
+    for (let e = this.#firstEdge[nodeIndex]; e < this.#firstEdge[nodeIndex + 1]; e++) {
       const base = e * stride;
       const type = this.#edgeTypeNames[this.#edges[base + f.type]];
       const raw = this.#edges[base + f.name_or_index];
@@ -111,6 +108,17 @@ function indexFields(names) {
   const byName = Object.create(null);
   for (let i = 0; i < names.length; i++) byName[names[i]] = i;
   return byName;
+}
+
+function buildEdgeOffsets(nodes, stride, edgeCountField, nodeCount) {
+  const firstEdge = new Int32Array(nodeCount + 1);
+  let acc = 0;
+  for (let i = 0; i < nodeCount; i++) {
+    firstEdge[i] = acc;
+    acc += nodes[i * stride + edgeCountField];
+  }
+  firstEdge[nodeCount] = acc;
+  return firstEdge;
 }
 
 const REQUIRED_NODE_FIELDS = ['type', 'name', 'id', 'self_size', 'edge_count'];

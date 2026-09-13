@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { parseSnapshot } from '../src/snapshot.js';
 import { InvalidSnapshotError, OutOfRangeError } from '../src/errors.js';
-import { tinySnapshot } from './helpers/fixture.js';
+import { tinySnapshot, withRealSnapshot } from './helpers/fixture.js';
 
 test('parses a well formed snapshot and derives strides from meta', () => {
   const snap = parseSnapshot(tinySnapshot());
@@ -170,4 +171,25 @@ test('an element or hidden edge keeps name_or_index numeric', () => {
 test('edgesOf rejects an out-of-range nodeIndex', () => {
   const snap = parseSnapshot(tinySnapshot());
   assert.throws(() => [...snap.edgesOf(3)], OutOfRangeError);
+});
+
+test('every edge in a real snapshot resolves to a valid nodeIndex', async () => {
+  // A real snapshot has far more nodes than the hand written fixture, this
+  // is what actually exercises the firstEdge index across many nodes rather
+  // than the 3-node/2-edge case above.
+  await withRealSnapshot(async (file) => {
+    const json = JSON.parse(await readFile(file, 'utf8'));
+    const snap = parseSnapshot(json);
+    assert.ok(snap.nodeCount > 1000, `expected a populated heap, got ${snap.nodeCount} nodes`);
+
+    let checked = 0;
+    for (let i = 0; i < 2000; i++) {
+      for (const edge of snap.edgesOf(i)) {
+        assert.ok(Number.isInteger(edge.to), `edge.to ${edge.to} is not an integer nodeIndex`);
+        assert.ok(edge.to >= 0 && edge.to < snap.nodeCount, `edge.to ${edge.to} is out of range`);
+        checked++;
+      }
+    }
+    assert.ok(checked > 0, 'expected the first 2000 nodes to have some edges');
+  });
 });
