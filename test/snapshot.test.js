@@ -305,3 +305,19 @@ test('reachableNodes on a real snapshot only contains valid nodeIndexes', async 
     }
   });
 });
+
+test('rootCategories on the tiny fixture just reflects node 0\'s own children', () => {
+  const snap = parseSnapshot(tinySnapshot());
+  assert.deepEqual(snap.rootCategories(), [{ nodeIndex: 1, name: 'Foo' }]);
+});
+
+test('rootCategories on a real snapshot finds the actual V8 root names', async () => {
+  await withRealSnapshot(async (file) => {
+    const snap = await loadSnapshot(file);
+    const names = snap.rootCategories().map((c) => c.name);
+    assert.ok(names.includes('(GC roots)'), names.join(', '));
+    // Finer categories one level under "(GC roots)" should also be present.
+    assert.ok(names.includes('(Global handles)'), names.join(', '));
+    assert.ok(names.includes('(Stack roots)'), names.join(', '));
+  });
+});

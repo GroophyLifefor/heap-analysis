@@ -129,12 +129,14 @@ export class Snapshot {
     return referrers;
   }
 
-  /** Every nodeIndex reachable from the GC roots by following outgoing
-   * edges, as a Set. Node 0 is always the synthetic "(GC roots)" entry
-   * point in a snapshot written by v8.writeHeapSnapshot() -- verified
-   * against two independently generated real snapshots (type "synthetic",
-   * empty name). A node outside this set is garbage the collector hasn't
-   * reclaimed yet, or one this package's traversal can't reach. */
+  /** Every nodeIndex reachable from the roots by following outgoing edges,
+   * as a Set. Node 0 is always the snapshot's synthetic entry point in a
+   * snapshot written by v8.writeHeapSnapshot() (type "synthetic", empty
+   * name -- verified against two independently generated real snapshots),
+   * with a handful of direct children including the actual "(GC roots)"
+   * node, see rootCategories(). A node outside this set is garbage the
+   * collector hasn't reclaimed yet, or one this package's traversal can't
+   * reach. */
   reachableNodes() {
     const seen = new Set([0]);
     const queue = [0];
@@ -148,6 +150,26 @@ export class Snapshot {
       }
     }
     return seen;
+  }
+
+  /** The named synthetic root categories a GC root path eventually bottoms
+   * out at -- direct children of node 0 (e.g. "(GC roots)", "Node /
+   * Environment", "C++ Persistent roots"), plus, if present, the finer
+   * categories one level under "(GC roots)" itself (e.g. "(Global
+   * handles)", "(Stack roots)", "(Handle scope)"). Verified against a real
+   * snapshot rather than assumed: these are literal V8 string constants. */
+  rootCategories() {
+    const categories = [];
+    for (const edge of this.edgesOf(0)) {
+      categories.push({ nodeIndex: edge.to, name: this.nameOf(edge.to) });
+    }
+    const gcRoots = categories.find((c) => c.name === '(GC roots)');
+    if (gcRoots) {
+      for (const edge of this.edgesOf(gcRoots.nodeIndex)) {
+        categories.push({ nodeIndex: edge.to, name: this.nameOf(edge.to) });
+      }
+    }
+    return categories;
   }
 
   #assertNodeIndex(nodeIndex) {
