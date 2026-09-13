@@ -21,9 +21,10 @@ export class Snapshot {
    * edges firstEdge[i] .. firstEdge[i + 1] - 1. Length is nodeCount + 1,
    * the extra slot lets the last node's range end without a special case. */
   #firstEdge;
-  /** Built lazily on first use of referrersOf(): the inverse of edgesOf,
-   * referrers[i] lists every nodeIndex holding an edge into node i. */
-  #referrers;
+  /** Built lazily on first use of referrersOf(), same shape as firstEdge
+   * but inverted -- see #buildReferrers(). */
+  #firstReferrer;
+  #referrerNodes;
 
   constructor({ nodes, edges, strings, meta, nodeCount, edgeCount }) {
     this.nodeCount = nodeCount;
@@ -117,16 +118,44 @@ export class Snapshot {
    * since it only sees edges leaving that node. */
   referrersOf(nodeIndex) {
     this.#assertNodeIndex(nodeIndex);
-    this.#referrers ??= this.#buildReferrers();
-    return this.#referrers[nodeIndex];
+    if (!this.#firstReferrer) this.#buildReferrers();
+    const out = [];
+    for (let i = this.#firstReferrer[nodeIndex]; i < this.#firstReferrer[nodeIndex + 1]; i++) {
+      out.push(this.#referrerNodes[i]);
+    }
+    return out;
   }
 
+  /** Same shape as firstEdge/edges, but inverted: firstReferrer[i] is where
+   * node i's referrers start in referrerNodes. Built in three passes over
+   * edgesOf (count, then cumulative offsets, then fill) rather than
+   * nodeCount separate growing arrays, the same trade PR9 made for edges. */
   #buildReferrers() {
-    const referrers = Array.from({ length: this.nodeCount }, () => []);
+    const counts = new Int32Array(this.nodeCount);
     for (let i = 0; i < this.nodeCount; i++) {
-      for (const edge of this.edgesOf(i)) referrers[edge.to].push(i);
+      for (const edge of this.edgesOf(i)) counts[edge.to]++;
     }
-    return referrers;
+
+    const firstReferrer = new Int32Array(this.nodeCount + 1);
+    let acc = 0;
+    for (let i = 0; i < this.nodeCount; i++) {
+      firstReferrer[i] = acc;
+      acc += counts[i];
+    }
+    firstReferrer[this.nodeCount] = acc;
+
+    // A mutable cursor per node, starting at its own offset, advanced as
+    // each referrer is written -- same role `counts` played, reused so a
+    // third array isn't needed.
+    const cursor = counts;
+    cursor.set(firstReferrer.subarray(0, this.nodeCount));
+    const referrerNodes = new Int32Array(this.edgeCount);
+    for (let i = 0; i < this.nodeCount; i++) {
+      for (const edge of this.edgesOf(i)) referrerNodes[cursor[edge.to]++] = i;
+    }
+
+    this.#firstReferrer = firstReferrer;
+    this.#referrerNodes = referrerNodes;
   }
 
   /** Every nodeIndex reachable from the roots by following outgoing edges,
