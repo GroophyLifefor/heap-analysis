@@ -229,3 +229,18 @@ test('loadSnapshot reports invalid JSON as InvalidSnapshotError', async () => {
 // large would make this suite itself the slow, disk-hungry thing it is
 // testing against. Verified manually against the real error code instead
 // (see the PR description).
+
+test('totalShallowSize sums self_size across every node', () => {
+  const snap = parseSnapshot(tinySnapshot());
+  assert.equal(snap.totalShallowSize, 64); // 0 + 40 + 24
+});
+
+test('totalShallowSize on a real snapshot matches a manual sum', async () => {
+  await withRealSnapshot(async (file) => {
+    const snap = await loadSnapshot(file);
+    let manual = 0;
+    for (let i = 0; i < snap.nodeCount; i++) manual += snap.node(i).selfSize;
+    assert.equal(snap.totalShallowSize, manual);
+    assert.ok(snap.totalShallowSize > 0);
+  });
+});

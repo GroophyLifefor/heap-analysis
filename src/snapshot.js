@@ -43,6 +43,16 @@ export class Snapshot {
     this.#firstEdge = buildEdgeOffsets(nodes, this.nodeStride, this.#nodeField.edge_count, nodeCount);
   }
 
+  /** Total shallow size of every node in the snapshot, in bytes
+   * (CONTRIBUTING.md #3). */
+  get totalShallowSize() {
+    const stride = this.nodeStride;
+    const selfSize = this.#nodeField.self_size;
+    let total = 0;
+    for (let i = 0; i < this.nodeCount; i++) total += this.#nodes[i * stride + selfSize];
+    return total;
+  }
+
   /** Decodes one node into a plain object. `id` is V8's own stable object id
    * (survives across snapshots), `index` is this node's position among
    * `nodeCount` nodes (what every other method in this package takes).
