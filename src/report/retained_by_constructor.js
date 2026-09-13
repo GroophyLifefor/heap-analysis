@@ -15,7 +15,7 @@ export function summarizeRetainedByConstructor(snapshot, retained, { top = Infin
   for (const nodeIndex of snapshot.reachableNodes()) {
     const key = groupKeyOf(snapshot, nodeIndex);
     counts.set(key, (counts.get(key) ?? 0) + 1);
-    sizes.set(key, (sizes.get(key) ?? 0) + Math.round(retained[nodeIndex] / 1024));
+    sizes.set(key, (sizes.get(key) ?? 0) + retained[nodeIndex]);
   }
 
   const rows = [];

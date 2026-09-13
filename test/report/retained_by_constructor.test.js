@@ -19,6 +19,16 @@ test('groups the tiny fixture into one row per constructor/type', () => {
   assert.deepEqual(byGroup, new Map([['(synthetic)', 1], ['Foo', 1], ['(string)', 1]]));
 });
 
+test('totalRetained is bytes, not KB', () => {
+  // Regression: dividing by 1024 rounds every group here to 0, since none
+  // of the tiny fixture's retained sizes reach 1024 bytes.
+  const rows = summarize(tinySnapshot());
+  const sizes = new Map(rows.map((r) => [r.group, r.totalRetained]));
+  assert.equal(sizes.get('(synthetic)'), 64); // node0's own retained size (0 self + 64 dominated)
+  assert.equal(sizes.get('Foo'), 64);
+  assert.equal(sizes.get('(string)'), 24);
+});
+
 test('honours top on a real snapshot, where sizes clearly differ', async () => {
   class BigProbe {
     constructor() {
@@ -56,7 +66,9 @@ test('on a real snapshot, a class with several instances is reported with the ri
     const row = rows.find((r) => r.group === 'GroupKeyProbe');
     assert.ok(row, 'expected a GroupKeyProbe row in the summary');
     assert.equal(row.count, 25);
-    assert.equal(typeof row.totalRetained, 'number');
+    // 25 instances retaining a 64-byte Buffer each should be nowhere near
+    // rounding to 0 -- would be exactly what dividing by 1024 does here.
+    assert.ok(row.totalRetained > 1000, `totalRetained ${row.totalRetained} looks rounded away`);
   });
 
   delete globalThis.__groupKeyProbeInstances;
