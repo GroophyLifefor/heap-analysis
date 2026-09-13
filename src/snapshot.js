@@ -182,7 +182,7 @@ export class Snapshot {
     for (let i = 0; i < this.nodeCount; i++) {
       if (reachable.has(i)) continue;
       count++;
-      totalSize += Math.round(this.node(i).selfSize / 1024);
+      totalSize += this.node(i).selfSize;
     }
     return { count, totalSize };
   }
