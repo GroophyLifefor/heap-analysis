@@ -187,6 +187,13 @@ export class Snapshot {
     return { count, totalSize };
   }
 
+  /** Every node, decoded, in nodeIndex order -- `for (const n of snapshot)`
+   * or `[...snapshot]`. Every node regardless of reachability, same as
+   * node(i) for i in 0..nodeCount-1; use reachableNodes() to filter. */
+  *[Symbol.iterator]() {
+    for (let i = 0; i < this.nodeCount; i++) yield this.node(i);
+  }
+
   #assertNodeIndex(nodeIndex) {
     if (!Number.isInteger(nodeIndex) || nodeIndex < 0 || nodeIndex >= this.nodeCount) {
       throw new OutOfRangeError(`nodeIndex ${nodeIndex} is outside 0..${this.nodeCount - 1}`);

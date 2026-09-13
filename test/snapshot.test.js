@@ -337,3 +337,31 @@ test('unreachableSummary counts a node with no path from the root', () => {
   // count or a loosely truthy size.
   assert.deepEqual(snap.unreachableSummary(), { count: 1, totalSize: 8 });
 });
+
+test('iterating a snapshot yields every node in order, decoded like node()', () => {
+  const snap = parseSnapshot(tinySnapshot());
+  const nodes = [...snap];
+  assert.equal(nodes.length, 3);
+  assert.deepEqual(nodes[0], snap.node(0));
+  assert.deepEqual(nodes[1], snap.node(1));
+  assert.deepEqual(nodes[2], snap.node(2));
+});
+
+test('a snapshot works with for...of', () => {
+  const snap = parseSnapshot(tinySnapshot());
+  let count = 0;
+  for (const node of snap) {
+    assert.equal(node.index, count);
+    count++;
+  }
+  assert.equal(count, 3);
+});
+
+test('iterating a real snapshot visits exactly nodeCount nodes', async () => {
+  await withRealSnapshot(async (file) => {
+    const snap = await loadSnapshot(file);
+    let count = 0;
+    for (const _ of snap) count++;
+    assert.equal(count, snap.nodeCount);
+  });
+});
