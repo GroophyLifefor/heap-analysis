@@ -12,6 +12,12 @@ test('parses a well formed snapshot and derives strides from meta', () => {
   assert.equal(snap.edgeStride, 3);
 });
 
+test('rejects JSON with no snapshot.meta as InvalidSnapshotError, not a bare Error', () => {
+  assert.throws(() => parseSnapshot({ hello: 'world' }), InvalidSnapshotError);
+  assert.throws(() => parseSnapshot(null), InvalidSnapshotError);
+  assert.throws(() => parseSnapshot({ snapshot: {} }), InvalidSnapshotError);
+});
+
 test('rejects a snapshot missing a required node field', () => {
   const json = tinySnapshot();
   json.snapshot.meta.node_fields = json.snapshot.meta.node_fields.filter((f) => f !== 'self_size');

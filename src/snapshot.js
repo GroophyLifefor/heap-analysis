@@ -35,7 +35,7 @@ const REQUIRED_EDGE_FIELDS = ['type', 'name_or_index', 'to_node'];
  * integers. */
 export function parseSnapshot(json) {
   if (!json || typeof json !== 'object' || !json.snapshot || !json.snapshot.meta) {
-    throw new Error('missing snapshot.meta, this is not a V8 heap snapshot');
+    throw new InvalidSnapshotError('missing snapshot.meta, this is not a V8 heap snapshot');
   }
 
   const meta = json.snapshot.meta;
