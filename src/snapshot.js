@@ -13,7 +13,9 @@ export class Snapshot {
   #strings;
   #meta;
   #nodeField;
+  #edgeField;
   #nodeTypeNames;
+  #edgeTypeNames;
 
   constructor({ nodes, edges, strings, meta, nodeCount, edgeCount }) {
     this.nodeCount = nodeCount;
@@ -26,11 +28,13 @@ export class Snapshot {
     this.#strings = strings;
     this.#meta = meta;
     this.#nodeField = indexFields(meta.node_fields);
-    // meta.node_types[0] is the list of type names ("object", "string", ...),
-    // a node's own `type` field is an index into it. The remaining entries
-    // in node_types describe every other field's own type (e.g. "number"
-    // for self_size) and are not needed here.
+    this.#edgeField = indexFields(meta.edge_fields);
+    // meta.node_types[0] / edge_types[0] are the list of type names, a
+    // node's or edge's own `type` field is an index into the matching list.
+    // The remaining entries describe every other field's own type (e.g.
+    // "number" for self_size) and are not needed here.
     this.#nodeTypeNames = meta.node_types[0];
+    this.#edgeTypeNames = meta.edge_types[0];
   }
 
   /** Decodes one node into a plain object. `id` is V8's own stable object id
@@ -65,6 +69,34 @@ export class Snapshot {
     this.#assertNodeIndex(nodeIndex);
     const nameIndex = this.#nodes[nodeIndex * this.nodeStride + this.#nodeField.name];
     return this.#strings[nameIndex];
+  }
+
+  /** The outgoing edges of one node. `to` is the nodeIndex the edge points
+   * at (an ordinal, not the raw offset `to_node` stores -- see
+   * CONTRIBUTING.md #2). `name` is a numeric index for an `element` or
+   * `hidden` edge (array position), a string for every other type. */
+  *edgesOf(nodeIndex) {
+    this.#assertNodeIndex(nodeIndex);
+    // Every node before this one owns edge_count edges, so summing those
+    // gives the offset where this node's own edges start in `edges`.
+    let start = 0;
+    for (let i = 0; i < nodeIndex; i++) {
+      start += this.#nodes[i * this.nodeStride + this.#nodeField.edge_count];
+    }
+    const count = this.#nodes[nodeIndex * this.nodeStride + this.#nodeField.edge_count];
+
+    const f = this.#edgeField;
+    const stride = this.edgeStride;
+    for (let e = start; e < start + count; e++) {
+      const base = e * stride;
+      const type = this.#edgeTypeNames[this.#edges[base + f.type]];
+      const raw = this.#edges[base + f.name_or_index];
+      yield {
+        type,
+        name: type === 'element' || type === 'hidden' ? raw : this.#strings[raw],
+        to: this.#edges[base + f.to_node],
+      };
+    }
   }
 
   #assertNodeIndex(nodeIndex) {

@@ -127,3 +127,38 @@ test('rejects a nodeIndex outside the snapshot', () => {
   assert.throws(() => snap.node(-1), OutOfRangeError);
   assert.throws(() => snap.node(1.5), OutOfRangeError);
 });
+
+test('edgesOf yields the property edge with its type and name', () => {
+  const snap = parseSnapshot(tinySnapshot());
+  const edges = [...snap.edgesOf(0)];
+  assert.equal(edges.length, 1);
+  assert.equal(edges[0].type, 'property');
+  assert.equal(edges[0].name, 'prop');
+  assert.equal(typeof edges[0].to, 'number');
+});
+
+test('edgesOf finds the right edge for a node past the first', () => {
+  const edges = [...parseSnapshot(tinySnapshot()).edgesOf(1)];
+  assert.equal(edges.length, 1);
+  assert.equal(edges[0].type, 'property');
+  assert.equal(edges[0].name, 'prop');
+});
+
+test('edgesOf yields nothing for a node with no outgoing edges', () => {
+  const edges = [...parseSnapshot(tinySnapshot()).edgesOf(2)];
+  assert.equal(edges.length, 0);
+});
+
+test('an element or hidden edge keeps name_or_index numeric', () => {
+  const json = tinySnapshot();
+  json.edges[0] = 1; // element, not property
+  json.edges[1] = 7; // an array index, not a string-table index
+  const edges = [...parseSnapshot(json).edgesOf(0)];
+  assert.equal(edges[0].type, 'element');
+  assert.equal(edges[0].name, 7);
+});
+
+test('edgesOf rejects an out-of-range nodeIndex', () => {
+  const snap = parseSnapshot(tinySnapshot());
+  assert.throws(() => [...snap.edgesOf(3)], OutOfRangeError);
+});
