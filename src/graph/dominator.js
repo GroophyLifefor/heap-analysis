@@ -38,8 +38,7 @@ export function computeDominators(snapshot) {
     for (let i = 1; i < rpo.length; i++) {
       const b = rpo[i];
       let newIdom = -1;
-      for (const edge of snapshot.edgesOf(b)) {
-        const p = edge.to;
+      for (const p of snapshot.referrersOf(b)) {
         if (idom[p] === -1) continue; // predecessor not processed yet
         newIdom = newIdom === -1 ? p : intersect(newIdom, p);
       }
