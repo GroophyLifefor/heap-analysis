@@ -172,8 +172,11 @@ export function parseSnapshot(json) {
   }
 
   return new Snapshot({
-    nodes: json.nodes,
-    edges: json.edges,
+    // Int32Array rather than a plain Array: one field costs 4 bytes instead
+    // of a boxed JS number, which is the difference between analysing a
+    // large heap and becoming the problem (CONTRIBUTING.md #4).
+    nodes: Int32Array.from(json.nodes),
+    edges: Int32Array.from(json.edges),
     strings: json.strings ?? [],
     meta,
     nodeCount,
