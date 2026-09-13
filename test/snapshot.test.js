@@ -244,3 +244,38 @@ test('totalShallowSize on a real snapshot matches a manual sum', async () => {
     assert.ok(snap.totalShallowSize > 0);
   });
 });
+
+test('referrersOf is the inverse of edgesOf on the tiny fixture', () => {
+  const snap = parseSnapshot(tinySnapshot());
+  assert.deepEqual(snap.referrersOf(0), []); // nothing points at the root
+  assert.deepEqual(snap.referrersOf(1), [0]); // node 0 -> node 1
+  assert.deepEqual(snap.referrersOf(2), [1]); // node 1 -> node 2
+});
+
+test('referrersOf rejects an out-of-range nodeIndex', () => {
+  const snap = parseSnapshot(tinySnapshot());
+  assert.throws(() => snap.referrersOf(3), OutOfRangeError);
+});
+
+test('every edge in a real snapshot contributes exactly one referrer entry', async () => {
+  await withRealSnapshot(async (file) => {
+    const snap = await loadSnapshot(file);
+    let total = 0;
+    for (let i = 0; i < snap.nodeCount; i++) total += snap.referrersOf(i).length;
+    assert.equal(total, snap.edgeCount);
+  });
+});
+
+test('referrersOf agrees with edgesOf: every listed referrer really has an edge to the target', async () => {
+  await withRealSnapshot(async (file) => {
+    const snap = await loadSnapshot(file);
+    // Spot check rather than exhaustive: build referrers for the first 300
+    // nodes and confirm each one is backed by a real outgoing edge.
+    for (let target = 0; target < 300; target++) {
+      for (const referrer of snap.referrersOf(target)) {
+        const hasEdge = [...snap.edgesOf(referrer)].some((e) => e.to === target);
+        assert.ok(hasEdge, `node ${referrer} listed as a referrer of ${target} but has no such edge`);
+      }
+    }
+  });
+});

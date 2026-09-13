@@ -21,6 +21,9 @@ export class Snapshot {
    * edges firstEdge[i] .. firstEdge[i + 1] - 1. Length is nodeCount + 1,
    * the extra slot lets the last node's range end without a special case. */
   #firstEdge;
+  /** Built lazily on first use of referrersOf(): the inverse of edgesOf,
+   * referrers[i] lists every nodeIndex holding an edge into node i. */
+  #referrers;
 
   constructor({ nodes, edges, strings, meta, nodeCount, edgeCount }) {
     this.nodeCount = nodeCount;
@@ -106,6 +109,24 @@ export class Snapshot {
         to: this.#edges[base + f.to_node] / this.nodeStride,
       };
     }
+  }
+
+  /** Every nodeIndex holding an outgoing edge into `nodeIndex` -- the
+   * inverse of edgesOf. Built once on first call, across every node in the
+   * snapshot, then cached; a single edgesOf(nodeIndex) can't answer this
+   * since it only sees edges leaving that node. */
+  referrersOf(nodeIndex) {
+    this.#assertNodeIndex(nodeIndex);
+    this.#referrers ??= this.#buildReferrers();
+    return this.#referrers[nodeIndex];
+  }
+
+  #buildReferrers() {
+    const referrers = Array.from({ length: this.nodeCount }, () => []);
+    for (let i = 0; i < this.nodeCount; i++) {
+      for (const edge of this.edgesOf(i)) referrers[edge.to].push(i);
+    }
+    return referrers;
   }
 
   #assertNodeIndex(nodeIndex) {
