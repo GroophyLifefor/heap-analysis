@@ -33,8 +33,7 @@ export class Snapshot {
    * `selfSize` is bytes, per CONTRIBUTING.md #3. */
   node(nodeIndex) {
     this.#assertNodeIndex(nodeIndex);
-    const NODE_STRIDE = 7;
-    const base = nodeIndex * NODE_STRIDE;
+    const base = nodeIndex * this.nodeStride;
     const f = this.#nodeField;
     return {
       index: nodeIndex,
