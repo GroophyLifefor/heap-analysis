@@ -1,6 +1,6 @@
 {
   "name": "heap-analysis",
-  "version": "0.0.1",
+  "version": "0.2.0",
   "description": "Post-mortem V8 heap snapshot analysis for Node.js. Work in progress.",
   "type": "module",
   "main": "./index.js",
@@ -15,7 +15,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test \"test/**/*.test.js\""
+    "test": "node --test \"test/**/*.test.js\"",
+    "verify-pack": "node scripts/verify-pack.mjs"
   },
   "keywords": [
     "heap",
