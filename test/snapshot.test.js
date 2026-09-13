@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-import { parseSnapshot } from '../src/snapshot.js';
+import { readFile, mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { parseSnapshot, loadSnapshot } from '../src/snapshot.js';
 import { InvalidSnapshotError, OutOfRangeError } from '../src/errors.js';
 import { tinySnapshot, withRealSnapshot } from './helpers/fixture.js';
 
@@ -193,3 +195,37 @@ test('every edge in a real snapshot resolves to a valid nodeIndex', async () => 
     assert.ok(checked > 0, 'expected the first 2000 nodes to have some edges');
   });
 });
+
+test('loadSnapshot reads and parses a real snapshot file', async () => {
+  await withRealSnapshot(async (file) => {
+    const snap = await loadSnapshot(file);
+    assert.ok(snap.nodeCount > 0);
+  });
+});
+
+test('loadSnapshot reports a missing file as InvalidSnapshotError', async () => {
+  await assert.rejects(() => loadSnapshot('./does-not-exist.heapsnapshot'), {
+    name: 'InvalidSnapshotError',
+    message: /no such snapshot/,
+  });
+});
+
+test('loadSnapshot reports invalid JSON as InvalidSnapshotError', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'heap-analysis-'));
+  const file = join(dir, 'not-json.heapsnapshot');
+  try {
+    await writeFile(file, 'this is not json');
+    await assert.rejects(() => loadSnapshot(file), {
+      name: 'InvalidSnapshotError',
+      message: /not valid JSON/,
+    });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+// loadSnapshot's ERR_STRING_TOO_LONG branch (a snapshot over Node's ~537MB
+// string limit) is handled but not covered here: writing a fixture that
+// large would make this suite itself the slow, disk-hungry thing it is
+// testing against. Verified manually against the real error code instead
+// (see the PR description).
