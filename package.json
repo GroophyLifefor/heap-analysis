@@ -1,0 +1,34 @@
+{
+  "name": "heap-analysis",
+  "version": "0.0.1",
+  "description": "Post-mortem V8 heap snapshot analysis for Node.js. Work in progress.",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "files": [
+    "index.js"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "heap",
+    "heapsnapshot",
+    "memory",
+    "memory-leak",
+    "v8",
+    "profiling"
+  ],
+  "author": "Murat Kirazkaya",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GroophyLifefor/heap-analysis.git"
+  },
+  "bugs": {
+    "url": "https://github.com/GroophyLifefor/heap-analysis/issues"
+  },
+  "homepage": "https://github.com/GroophyLifefor/heap-analysis#readme"
+}
