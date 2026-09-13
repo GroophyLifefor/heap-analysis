@@ -38,3 +38,42 @@ test('on a real snapshot, finds every instance of a class with several', async (
 
   delete globalThis.__findProbeInstances;
 });
+
+test('an exact match does not also catch a class name that merely contains it', async () => {
+  // Regression: this used to be a substring match, so 'User' would also
+  // match 'UserSession'.
+  class ExactProbe {
+    constructor() {}
+  }
+  class ExactProbeExtra {
+    constructor() {}
+  }
+  globalThis.__exactProbeInstances = [new ExactProbe(), new ExactProbeExtra(), new ExactProbeExtra()];
+
+  await withRealSnapshot(async (file) => {
+    const snap = await loadSnapshot(file);
+    const matches = findByClassName(snap, 'ExactProbe');
+    assert.equal(matches.length, 1);
+    assert.equal(snap.nameOf(matches[0]), 'ExactProbe');
+  });
+
+  delete globalThis.__exactProbeInstances;
+});
+
+test('a trailing * makes it a prefix match', async () => {
+  class ExactProbe {
+    constructor() {}
+  }
+  class ExactProbeExtra {
+    constructor() {}
+  }
+  globalThis.__exactProbeInstances2 = [new ExactProbe(), new ExactProbeExtra(), new ExactProbeExtra()];
+
+  await withRealSnapshot(async (file) => {
+    const snap = await loadSnapshot(file);
+    const matches = findByClassName(snap, 'ExactProbe*');
+    assert.equal(matches.length, 3);
+  });
+
+  delete globalThis.__exactProbeInstances2;
+});
