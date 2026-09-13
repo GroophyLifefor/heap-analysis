@@ -1,9 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseSnapshot, loadSnapshot } from '../../src/snapshot.js';
+import { OutOfRangeError } from '../../src/errors.js';
 import { computeDominators } from '../../src/graph/dominator.js';
 import { buildDominatorChildren, childCountOf, childAt } from '../../src/graph/dominator_children.js';
 import { tinySnapshot, withRealSnapshot } from '../helpers/fixture.js';
+
+test('childAt rejects an index one past the last child, not just negative or way out of range', () => {
+  // Regression: valid indices are 0..count-1, so i === count must throw --
+  // a > instead of >= bounds check lets it through and silently reads
+  // into the next node's own slice of the flat array.
+  const snap = parseSnapshot(tinySnapshot());
+  const children = buildDominatorChildren(snap, computeDominators(snap));
+  const count = childCountOf(children, 0);
+  assert.throws(() => childAt(children, 0, count), OutOfRangeError);
+  assert.throws(() => childAt(children, 0, -1), OutOfRangeError);
+});
 
 test('on a linear chain, each node has exactly one dominator-tree child', () => {
   const snap = parseSnapshot(tinySnapshot());

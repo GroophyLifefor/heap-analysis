@@ -44,7 +44,7 @@ export function childCountOf(children, nodeIndex) {
 /** The i-th dominator-tree child of `nodeIndex` (0-indexed). */
 export function childAt(children, nodeIndex, i) {
   const count = childCountOf(children, nodeIndex);
-  if (i < 0 || i > count) {
+  if (i < 0 || i >= count) {
     throw new OutOfRangeError(`child index ${i} is outside 0..${count - 1} for node ${nodeIndex}`);
   }
   return children.childNodes[children.firstChild[nodeIndex] + i];
