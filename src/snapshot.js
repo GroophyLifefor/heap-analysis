@@ -13,6 +13,7 @@ export class Snapshot {
   #strings;
   #meta;
   #nodeField;
+  #nodeTypeNames;
 
   constructor({ nodes, edges, strings, meta, nodeCount, edgeCount }) {
     this.nodeCount = nodeCount;
@@ -25,6 +26,11 @@ export class Snapshot {
     this.#strings = strings;
     this.#meta = meta;
     this.#nodeField = indexFields(meta.node_fields);
+    // meta.node_types[0] is the list of type names ("object", "string", ...),
+    // a node's own `type` field is an index into it. The remaining entries
+    // in node_types describe every other field's own type (e.g. "number"
+    // for self_size) and are not needed here.
+    this.#nodeTypeNames = meta.node_types[0];
   }
 
   /** Decodes one node into a plain object. `id` is V8's own stable object id
@@ -38,9 +44,27 @@ export class Snapshot {
     return {
       index: nodeIndex,
       id: this.#nodes[base + f.id],
+      type: this.#nodeTypeNames[this.#nodes[base + f.type]],
+      name: this.#strings[this.#nodes[base + f.name]],
       selfSize: this.#nodes[base + f.self_size],
       edgeCount: this.#nodes[base + f.edge_count],
     };
+  }
+
+  /** Type name of one node ("object", "string", ...), without decoding the
+   * rest of it. */
+  typeOf(nodeIndex) {
+    this.#assertNodeIndex(nodeIndex);
+    const typeIndex = this.#nodes[nodeIndex * this.nodeStride + this.#nodeField.type];
+    return this.#nodeTypeNames[typeIndex];
+  }
+
+  /** Name of one node, without decoding the rest of it. For an `object` node
+   * this is its constructor name, for a `string` node its contents. */
+  nameOf(nodeIndex) {
+    this.#assertNodeIndex(nodeIndex);
+    const nameIndex = this.#nodes[nodeIndex * this.nodeStride + this.#nodeField.name];
+    return this.#strings[nameIndex];
   }
 
   #assertNodeIndex(nodeIndex) {

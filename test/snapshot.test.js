@@ -77,6 +77,8 @@ test('decodes the first node into a plain object', () => {
   assert.deepEqual(snap.node(0), {
     index: 0,
     id: 1,
+    type: 'synthetic',
+    name: '',
     selfSize: 0,
     edgeCount: 1,
   });
@@ -90,15 +92,33 @@ test('decodes a node past the first using the snapshot\'s own stride', () => {
   assert.deepEqual(snap.node(1), {
     index: 1,
     id: 3,
+    type: 'object',
+    name: 'Foo',
     selfSize: 40,
     edgeCount: 1,
   });
   assert.deepEqual(snap.node(2), {
     index: 2,
     id: 5,
+    type: 'string',
+    name: 'hello',
     selfSize: 24,
     edgeCount: 0,
   });
+});
+
+test('typeOf and nameOf read the same fields node() does, standalone', () => {
+  const snap = parseSnapshot(tinySnapshot());
+  assert.equal(snap.typeOf(1), 'object');
+  assert.equal(snap.nameOf(1), 'Foo');
+  assert.equal(snap.typeOf(2), 'string');
+  assert.equal(snap.nameOf(2), 'hello');
+});
+
+test('typeOf and nameOf reject an out-of-range nodeIndex like node() does', () => {
+  const snap = parseSnapshot(tinySnapshot());
+  assert.throws(() => snap.typeOf(3), OutOfRangeError);
+  assert.throws(() => snap.nameOf(3), OutOfRangeError);
 });
 
 test('rejects a nodeIndex outside the snapshot', () => {
