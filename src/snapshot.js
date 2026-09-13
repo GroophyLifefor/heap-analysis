@@ -172,6 +172,21 @@ export class Snapshot {
     return categories;
   }
 
+  /** Nodes not in reachableNodes() -- garbage the collector hasn't
+   * reclaimed yet, or ones this package's traversal can't reach. Returns
+   * { count, totalSize }, totalSize in bytes (CONTRIBUTING.md #3). */
+  unreachableSummary() {
+    const reachable = this.reachableNodes();
+    let count = 0;
+    let totalSize = 0;
+    for (let i = 0; i < this.nodeCount; i++) {
+      if (reachable.has(i)) continue;
+      count++;
+      totalSize += this.node(i).selfSize;
+    }
+    return { count, totalSize };
+  }
+
   #assertNodeIndex(nodeIndex) {
     if (!Number.isInteger(nodeIndex) || nodeIndex < 0 || nodeIndex >= this.nodeCount) {
       throw new OutOfRangeError(`nodeIndex ${nodeIndex} is outside 0..${this.nodeCount - 1}`);
