@@ -365,3 +365,18 @@ test('iterating a real snapshot visits exactly nodeCount nodes', async () => {
     assert.equal(count, snap.nodeCount);
   });
 });
+
+test("detachednessOf reads the tiny fixtures own field, all zero", () => {
+  const snap = parseSnapshot(tinySnapshot());
+  assert.equal(snap.detachednessOf(0), 0);
+  assert.equal(snap.detachednessOf(1), 0);
+  assert.equal(snap.detachednessOf(2), 0);
+});
+
+test("detachednessOf returns 0 rather than throwing when the field is absent from meta", () => {
+  const json = tinySnapshot();
+  json.snapshot.meta.node_fields = ["type", "name", "id", "self_size", "edge_count"];
+  json.nodes = [9, 0, 1, 0, 1, 3, 1, 3, 40, 1, 2, 2, 5, 24, 0];
+  const snap = parseSnapshot(json);
+  assert.equal(snap.detachednessOf(1), 0);
+});

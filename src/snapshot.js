@@ -91,6 +91,18 @@ export class Snapshot {
     return this.#strings[nameIndex];
   }
 
+  /** V8's own detachedness marker for one node: 0 unknown/not tracked, 1
+   * attached, 2 detached (a DOM-style wrapper whose native side is gone but
+   * something in JS still holds it). Older V8 snapshots (CONTRIBUTING.md
+   * #1) don't carry this field at all, in which case every node reads as 0
+   * rather than throwing -- the field being absent isn't an error, it's a
+   * snapshot from a V8 that didn't track this yet. */
+  detachednessOf(nodeIndex) {
+    this.#assertNodeIndex(nodeIndex);
+    if (this.#nodeField.detachedness === undefined) return 0;
+    return this.#nodes[nodeIndex * this.nodeStride + this.#nodeField.detachedness];
+  }
+
   /** The outgoing edges of one node. `to` is the nodeIndex the edge points
    * at (an ordinal, not the raw offset `to_node` stores -- see
    * CONTRIBUTING.md #2). `name` is a numeric index for an `element` or
