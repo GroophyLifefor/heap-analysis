@@ -1,44 +1,45 @@
 # heap-analysis
 
-Post-mortem V8 heap snapshot analysis for Node.js. Zero runtime
+Post-mortem V8 `.heapsnapshot` analysis for Node.js. Zero runtime
 dependencies.
 
-**Status: work in progress.** The parser and object graph (this section)
-are implemented. Retained sizes from a dominator tree, GC root paths, a
-CLI, and diffs between two snapshots are not built yet.
+Take a snapshot from a running process (`node --heap-prof`, or
+`require('v8').writeHeapSnapshot()`), then load and analyze it after the
+fact: retained sizes via the dominator tree, GC root paths, duplicate
+strings, collection waste, detached nodes, closure/context retention, and
+diffs between two snapshots of the same process. Also usable directly as a
+CLI (`heap-analysis`) or an MCP server (`heap-analysis-mcp`) for an AI
+agent to drive.
 
-## Usage
+## Install
+
+```bash
+npm install -g heap-analysis
+```
+
+## Library
 
 ```js
-import { loadSnapshot } from 'heap-analysis';
+import { loadSnapshot, computeDominators, computeRetainedSizes } from 'heap-analysis';
 
-// Take one with `node --heap-prof` or:
-//   node -e "require('v8').writeHeapSnapshot('heap.heapsnapshot')"
 const snapshot = await loadSnapshot('heap.heapsnapshot');
-
 console.log(snapshot.nodeCount, 'nodes,', snapshot.totalShallowSize, 'bytes');
+
+// Retained size: what's kept alive by each object, not just its own bytes.
+const idom = computeDominators(snapshot);
+const retained = computeRetainedSizes(snapshot, idom);
 
 // Every node, in nodeIndex order.
 for (const node of snapshot) {
   if (node.type === 'object' && node.name === 'Session') {
-    console.log(node); // { index, id, type, name, selfSize, edgeCount }
+    console.log(node.index, 'retains', retained[node.index], 'bytes');
   }
 }
-
-// A node's outgoing edges, and the inverse: who points at it.
-console.log([...snapshot.edgesOf(46235)]);
-console.log(snapshot.referrersOf(46235)); // [35518, 46735]
-
-// Garbage the collector hasn't reclaimed yet, or otherwise unreachable.
-console.log(snapshot.unreachableSummary()); // { count, totalSize } (bytes)
-
-// The named V8 root categories a GC root path eventually bottoms out at.
-console.log(snapshot.rootCategories().map((c) => c.name));
-// [ '(GC roots)', 'global', 'C++ Persistent roots', ... ]
 ```
 
-Every error this package throws on purpose is a `HeapAnalysisError`
-subclass (`InvalidSnapshotError`, `OutOfRangeError`):
+Everything this package throws on purpose is a `HeapAnalysisError`
+subclass (`InvalidSnapshotError`, `OutOfRangeError`, `UsageError`,
+`InvalidPolicyError`):
 
 ```js
 import { loadSnapshot, HeapAnalysisError } from 'heap-analysis';
@@ -50,6 +51,65 @@ try {
   else throw error;
 }
 ```
+
+### What's available
+
+| area | exports |
+|---|---|
+| parsing | `parseSnapshot`, `loadSnapshot`, `Snapshot` |
+| dominator tree / retained size | `computeDominators`, `computeRetainedSizes`, `dominatedBy`, `isDominatedBy` |
+| GC root paths | `shortestPathToRoot`, `renderPath`, `allPathsToRoot`, `findByClassName` |
+| reports | `summarize`, `summarizeRetainedByConstructor`, `topInstancesByRetainedSize`, `findDuplicateStrings`, `findCollectionWaste`, `findDetachedNodes`, `findContextRetention` |
+| diffing two snapshots | `alignSnapshots`, `diffByClass`, `diffObjects`, `findGrowth` |
+| CI policy gate | `loadPolicy`, `evaluatePolicy`, `gateResult`, `renderJUnit`, `renderGithubActions` |
+
+Every size anywhere in this package is a plain number of bytes (see
+[CONTRIBUTING.md](CONTRIBUTING.md) #3) -- formatting to something like
+`"1.2 MB"` only happens at the very edge, in the CLI's table output.
+
+## CLI
+
+```bash
+heap-analysis summary --file heap.heapsnapshot
+heap-analysis retained --file heap.heapsnapshot --top 20
+heap-analysis top --file heap.heapsnapshot
+heap-analysis gc-path --file heap.heapsnapshot --class Session
+heap-analysis diff --before before.heapsnapshot --after after.heapsnapshot --mode growth
+```
+
+Every command supports `--json` for machine-readable output (raw bytes,
+never a formatted string).
+
+### CI gate
+
+```bash
+heap-analysis check --file heap.heapsnapshot --policy policy.json --fail-on error --junit results.xml
+```
+
+A policy file looks like:
+
+```json
+{
+  "rules": [
+    { "id": "no-detached-nodes", "type": "noDetachedNodes", "severity": "error" },
+    { "id": "session-cap", "type": "maxRetainedByConstructor", "constructor": "Session", "maxBytes": 5000000, "severity": "warning" }
+  ]
+}
+```
+
+Exit code `2` means a rule itself is broken (unknown type, bad params) --
+that's reported, never swallowed. Exit code `1` means a real violation at
+or above `--fail-on`. `0` means it passed.
+
+## MCP server
+
+```bash
+heap-analysis-mcp
+```
+
+Speaks MCP over stdio (JSON-RPC 2.0, one message per line), exposing
+`summary` and `top_instances` as tools an agent can call directly against
+a snapshot file.
 
 ## Contributing
 
