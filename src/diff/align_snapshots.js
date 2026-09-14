@@ -12,16 +12,21 @@
  * - `added`: nodeIndexes (in `after`) whose id has no match in `before`.
  */
 export function alignSnapshots(before, after) {
-  const n = Math.min(before.nodeCount, after.nodeCount);
+  const afterIndexById = new Map();
+  for (let i = 0; i < after.nodeCount; i++) afterIndexById.set(after.idOf(i), i);
+
   const matched = [];
-  for (let i = 0; i < n; i++) {
-    matched.push({ id: before.idOf(i), beforeIndex: i, afterIndex: i });
+  const removed = [];
+  for (let i = 0; i < before.nodeCount; i++) {
+    const id = before.idOf(i);
+    const afterIndex = afterIndexById.get(id);
+    if (afterIndex === undefined) {
+      removed.push(i);
+      continue;
+    }
+    matched.push({ id, beforeIndex: i, afterIndex });
+    afterIndexById.delete(id);
   }
 
-  const removed = [];
-  for (let i = n; i < before.nodeCount; i++) removed.push(i);
-  const added = [];
-  for (let i = n; i < after.nodeCount; i++) added.push(i);
-
-  return { matched, removed, added };
+  return { matched, removed, added: [...afterIndexById.values()] };
 }
