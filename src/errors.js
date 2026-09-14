@@ -18,3 +18,7 @@ export class OutOfRangeError extends HeapAnalysisError {}
  * an option that doesn't parse. The bin entry point catches this one (and
  * only this one) and prints just the message, per CONTRIBUTING.md #5. */
 export class UsageError extends HeapAnalysisError {}
+
+/** A policy file is missing, unreadable, or its JSON doesn't describe a
+ * valid set of rules (see loadPolicy). */
+export class InvalidPolicyError extends HeapAnalysisError {}
