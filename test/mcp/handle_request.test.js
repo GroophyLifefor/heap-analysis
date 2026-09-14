@@ -60,6 +60,26 @@ test('tools/call top_instances returns the root instance first', async () => {
   });
 });
 
+test('every tool\'s outputSchema field types match what the handler actually returns', async () => {
+  // A schema is only worth anything if a client can trust it -- this
+  // pins each declared JSON Schema `type` against typeof the real field,
+  // for every tool, so a schema/handler drift like top_instances'
+  // retainedSize (declared string, returned number) can't creep back in.
+  const { TOOLS } = await import('../../src/mcp/tools.js');
+  await withSnapshotFile(async (file) => {
+    for (const [name, tool] of Object.entries(TOOLS)) {
+      const result = await tool.handler({ file, top: 5 });
+      const properties = tool.outputSchema.items.properties;
+      for (const row of result) {
+        for (const [key, schema] of Object.entries(properties)) {
+          const jsType = schema.type === 'number' ? 'number' : 'string';
+          assert.equal(typeof row[key], jsType, `${name}.${key} declared ${schema.type}, got ${typeof row[key]}`);
+        }
+      }
+    }
+  });
+});
+
 test('tools/call for an unknown tool returns a JSON-RPC error', async () => {
   const response = await handleRequest({ jsonrpc: '2.0', id: 5, method: 'tools/call', params: { name: 'nope' } });
   assert.ok(response.error);

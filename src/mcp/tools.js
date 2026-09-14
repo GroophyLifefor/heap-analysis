@@ -59,7 +59,7 @@ export const TOOLS = {
           index: { type: 'number' },
           type: { type: 'string' },
           name: { type: 'string' },
-          retainedSize: { type: 'string' },
+          retainedSize: { type: 'number' },
         },
       },
     },
