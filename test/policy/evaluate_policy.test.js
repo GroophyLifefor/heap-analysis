@@ -51,3 +51,22 @@ test('a rule with an unknown type does not throw or crash the run', () => {
   const snap = parseSnapshot(tinySnapshot());
   assert.doesNotThrow(() => evaluatePolicy(snap, policy([{ id: 'r1', type: 'notARealRuleType' }])));
 });
+
+test('a rule with an unknown type is reported in ruleErrors, not silently dropped', () => {
+  const snap = parseSnapshot(tinySnapshot());
+  const { violations, ruleErrors } = evaluatePolicy(snap, policy([{ id: 'r1', type: 'notARealRuleType' }]));
+  assert.deepEqual(violations, []);
+  assert.equal(ruleErrors.length, 1);
+  assert.equal(ruleErrors[0].id, 'r1');
+  assert.match(ruleErrors[0].message, /unknown rule type/);
+});
+
+test('a rule with missing required params is reported in ruleErrors', () => {
+  const snap = parseSnapshot(tinySnapshot());
+  const { ruleErrors } = evaluatePolicy(
+    snap,
+    policy([{ id: 'r1', type: 'maxRetainedByConstructor', constructor: 'Foo' }]), // no maxBytes
+  );
+  assert.equal(ruleErrors.length, 1);
+  assert.equal(ruleErrors[0].id, 'r1');
+});

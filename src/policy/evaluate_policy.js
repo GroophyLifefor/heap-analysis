@@ -70,9 +70,8 @@ export function evaluatePolicy(snapshot, policy) {
       if (!evaluate) throw new Error(`unknown rule type \`${rule.type}\``);
       const message = evaluate(snapshot, rule);
       if (message) violations.push({ id: rule.id, severity: rule.severity, message });
-    } catch {
-      // A malformed rule (unknown type, missing params) shouldn't take the
-      // whole policy run down with it.
+    } catch (err) {
+      ruleErrors.push({ id: rule.id, message: err.message });
     }
   }
 
