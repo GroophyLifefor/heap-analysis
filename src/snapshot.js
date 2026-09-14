@@ -189,7 +189,9 @@ export class Snapshot {
 
   /** Walks raw edge records directly rather than edgesOf() -- this runs
    * over every edge in the snapshot, and edgesOf()'s per-node generator
-   * overhead isn't worth paying just to filter down to one edge name. */
+   * overhead isn't worth paying just to filter down to one edge name.
+   * to_node is a nodeOffset (CONTRIBUTING.md #2), divided by nodeStride
+   * before use as an index into `count`, which is nodeCount long. */
   #buildContextRetainerCounts() {
     const count = new Int32Array(this.nodeCount);
     const nf = this.#nodeField;
@@ -203,7 +205,7 @@ export class Snapshot {
         const base = e * this.edgeStride;
         if (this.#edges[base + ef.type] !== internalEdgeType) continue;
         if (this.#edges[base + ef.name_or_index] !== contextNameIndex) continue;
-        count[this.#edges[base + ef.to_node]]++;
+        count[this.#edges[base + ef.to_node] / this.nodeStride]++;
       }
     }
     this.#contextRetainerCount = count;
