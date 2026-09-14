@@ -380,3 +380,10 @@ test("detachednessOf returns 0 rather than throwing when the field is absent fro
   const snap = parseSnapshot(json);
   assert.equal(snap.detachednessOf(1), 0);
 });
+
+test("idOf reads the stable id field of the tiny fixture", () => {
+  const snap = parseSnapshot(tinySnapshot());
+  assert.equal(snap.idOf(0), 1);
+  assert.equal(snap.idOf(1), 3);
+  assert.equal(snap.idOf(2), 5);
+});
