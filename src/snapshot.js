@@ -25,6 +25,9 @@ export class Snapshot {
    * but inverted -- see #buildReferrers(). */
   #firstReferrer;
   #referrerNodes;
+  /** Built lazily on first use of contextRetainerCountOf(), see
+   * #buildContextRetainerCounts(). */
+  #contextRetainerCount;
 
   constructor({ nodes, edges, strings, meta, nodeCount, edgeCount }) {
     this.nodeCount = nodeCount;
@@ -168,6 +171,42 @@ export class Snapshot {
 
     this.#firstReferrer = firstReferrer;
     this.#referrerNodes = referrerNodes;
+  }
+
+  /** How many closures capture this node as their `context` (the internal
+   * edge every `closure` node has to the variables it captured). A count
+   * above 1 means several closures share one context object, so freeing
+   * any one of them still leaves the whole captured scope (everything else
+   * in that context, not just what that closure itself reads) alive --
+   * a common source of surprising retention. 0 for a node no closure
+   * captures, which is most nodes. Built once, lazily, across every
+   * closure's own edges, then cached. */
+  contextRetainerCountOf(nodeIndex) {
+    this.#assertNodeIndex(nodeIndex);
+    if (!this.#contextRetainerCount) this.#buildContextRetainerCounts();
+    return this.#contextRetainerCount[nodeIndex];
+  }
+
+  /** Walks raw edge records directly rather than edgesOf() -- this runs
+   * over every edge in the snapshot, and edgesOf()'s per-node generator
+   * overhead isn't worth paying just to filter down to one edge name. */
+  #buildContextRetainerCounts() {
+    const count = new Int32Array(this.nodeCount);
+    const nf = this.#nodeField;
+    const ef = this.#edgeField;
+    const closureType = this.#nodeTypeNames.indexOf('closure');
+    const internalEdgeType = this.#edgeTypeNames.indexOf('internal');
+    const contextNameIndex = this.#strings.indexOf('context');
+    for (let i = 0; i < this.nodeCount; i++) {
+      if (this.#nodes[i * this.nodeStride + nf.type] !== closureType) continue;
+      for (let e = this.#firstEdge[i]; e < this.#firstEdge[i + 1]; e++) {
+        const base = e * this.edgeStride;
+        if (this.#edges[base + ef.type] !== internalEdgeType) continue;
+        if (this.#edges[base + ef.name_or_index] !== contextNameIndex) continue;
+        count[this.#edges[base + ef.to_node]]++;
+      }
+    }
+    this.#contextRetainerCount = count;
   }
 
   /** Every nodeIndex reachable from the roots by following outgoing edges,
