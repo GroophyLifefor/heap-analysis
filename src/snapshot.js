@@ -78,6 +78,15 @@ export class Snapshot {
     };
   }
 
+  /** V8's own stable id for one node (CONTRIBUTING.md #2's third integer
+   * space), without decoding the rest of it. Survives across snapshots of
+   * the same process, unlike nodeIndex or nodeOffset -- the only field two
+   * snapshots can be aligned on. */
+  idOf(nodeIndex) {
+    this.#assertNodeIndex(nodeIndex);
+    return this.#nodes[nodeIndex * this.nodeStride + this.#nodeField.id];
+  }
+
   /** Type name of one node ("object", "string", ...), without decoding the
    * rest of it. */
   typeOf(nodeIndex) {
