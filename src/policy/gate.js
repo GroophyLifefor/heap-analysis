@@ -15,6 +15,6 @@ export function gateResult({ violations, ruleErrors }, { failOn = 'error' } = {}
   if (ruleErrors.length > 0) return { exitCode: 2, violations, ruleErrors };
 
   const threshold = SEVERITY_RANK[failOn];
-  const failing = violations.filter((v) => SEVERITY_RANK[v.severity] > threshold);
+  const failing = violations.filter((v) => SEVERITY_RANK[v.severity] >= threshold);
   return { exitCode: failing.length > 0 ? 1 : 0, violations, ruleErrors };
 }

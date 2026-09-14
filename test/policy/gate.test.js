@@ -18,6 +18,23 @@ test('an error-severity violation fails the gate when failOn is warning', () => 
   assert.equal(gateResult(evaluation, { failOn: 'warning' }).exitCode, 1);
 });
 
+test('an error-severity violation fails the gate when failOn is error (the boundary itself)', () => {
+  // rank(error) === rank(failOn) here -- a > comparison instead of >=
+  // would never fail since error is already the highest rank.
+  const evaluation = { violations: [{ id: 'r1', severity: 'error', message: 'x' }], ruleErrors: [] };
+  assert.equal(gateResult(evaluation, { failOn: 'error' }).exitCode, 1);
+});
+
+test('a warning-severity violation fails the gate when failOn is warning (the boundary itself)', () => {
+  const evaluation = { violations: [{ id: 'r1', severity: 'warning', message: 'x' }], ruleErrors: [] };
+  assert.equal(gateResult(evaluation, { failOn: 'warning' }).exitCode, 1);
+});
+
+test('a warning-severity violation does not fail the gate when failOn is error', () => {
+  const evaluation = { violations: [{ id: 'r1', severity: 'warning', message: 'x' }], ruleErrors: [] };
+  assert.equal(gateResult(evaluation, { failOn: 'error' }).exitCode, 0);
+});
+
 test('gateResult passes through violations and ruleErrors unchanged', () => {
   const evaluation = { violations: [{ id: 'r1', severity: 'error', message: 'x' }], ruleErrors: [] };
   const result = gateResult(evaluation, { failOn: 'warning' });
