@@ -45,6 +45,16 @@ test('retained --json prints valid JSON with a Foo group', async () => {
   });
 });
 
+test('retained --json keeps totalRetained a number, not a "1.2 MB" style string', () => {
+  return withSnapshotFile(async (file) => {
+    const output = await captureStdout(() => runCli(['retained', '--file', file, '--json']));
+    const rows = JSON.parse(output);
+    const foo = rows.find((r) => r.group === 'Foo');
+    assert.equal(typeof foo.totalRetained, 'number');
+    assert.equal(foo.totalRetained, 64);
+  });
+});
+
 test('retained prints a table with the group column', async () => {
   await withSnapshotFile(async (file) => {
     const output = await captureStdout(() => runCli(['retained', '--file', file]));

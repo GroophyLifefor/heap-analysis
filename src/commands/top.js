@@ -26,14 +26,14 @@ export async function topCommand(argv) {
   const snapshot = await loadSnapshot(values.file);
   const idom = computeDominators(snapshot);
   const retained = computeRetainedSizes(snapshot, idom);
-  const rows = withDisplaySize(topInstancesByRetainedSize(snapshot, retained, { top }), 'retainedSize');
+  const rows = topInstancesByRetainedSize(snapshot, retained, { top });
 
   if (values.json) {
     process.stdout.write(`${JSON.stringify(rows)}\n`);
     return;
   }
   process.stdout.write(
-    `${renderTable(rows, [
+    `${renderTable(withDisplaySize(rows, 'retainedSize'), [
       { key: 'index', header: 'index', align: 'right' },
       { key: 'type', header: 'type' },
       { key: 'name', header: 'name' },

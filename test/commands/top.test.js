@@ -45,6 +45,15 @@ test('top --json prints valid JSON, largest retained instance first', async () =
   });
 });
 
+test('top --json keeps retainedSize a number, not a "1.2 MB" style string', async () => {
+  await withSnapshotFile(async (file) => {
+    const output = await captureStdout(() => runCli(['top', '--file', file, '--json']));
+    const rows = JSON.parse(output);
+    assert.equal(typeof rows[0].retainedSize, 'number');
+    assert.equal(rows[0].retainedSize, 64);
+  });
+});
+
 test('top --top limits the row count', async () => {
   await withSnapshotFile(async (file) => {
     const output = await captureStdout(() => runCli(['top', '--file', file, '--top', '1', '--json']));
