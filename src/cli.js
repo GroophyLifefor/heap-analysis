@@ -5,6 +5,7 @@ import { retainedCommand } from './commands/retained.js';
 import { topCommand } from './commands/top.js';
 import { gcPathCommand } from './commands/gc_path.js';
 import { diffCommand } from './commands/diff.js';
+import { checkCommand } from './commands/check.js';
 
 const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
@@ -15,6 +16,7 @@ export const COMMANDS = {
   top: topCommand,
   'gc-path': gcPathCommand,
   diff: diffCommand,
+  check: checkCommand,
 };
 
 /** Parses argv (without the `node`/script entries) and runs the matching
