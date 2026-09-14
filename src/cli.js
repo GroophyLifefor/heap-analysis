@@ -3,16 +3,18 @@ import { UsageError } from './errors.js';
 import { summaryCommand } from './commands/summary.js';
 import { retainedCommand } from './commands/retained.js';
 import { topCommand } from './commands/top.js';
+import { gcPathCommand } from './commands/gc_path.js';
 
 const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
-/** Every subcommand the CLI knows about, keyed by name. PRs 44-45 add
- * `gc-path` and `diff`, each registering itself here rather than this
- * file growing a switch statement per command. */
+/** Every subcommand the CLI knows about, keyed by name. PR 45 adds `diff`,
+ * registering itself here rather than this file growing a switch
+ * statement per command. */
 export const COMMANDS = {
   summary: summaryCommand,
   retained: retainedCommand,
   top: topCommand,
+  'gc-path': gcPathCommand,
 };
 
 /** Parses argv (without the `node`/script entries) and runs the matching
