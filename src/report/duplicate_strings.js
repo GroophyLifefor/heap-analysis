@@ -7,11 +7,16 @@
  *
  * Returns `{ value, count, totalBytes, wastedBytes }[]`, sizes in bytes.
  */
+// V8 splits string storage across three node types: plain strings,
+// ConsStrings from repeated concatenation, and SlicedStrings that view a
+// larger string. All three carry duplicate-able string values.
+const STRING_TYPES = new Set(['string', 'concatenated string', 'sliced string']);
+
 export function findDuplicateStrings(snapshot, { top = 10 } = {}) {
   const groups = new Map();
 
   for (const node of snapshot) {
-    if (node.type !== 'string') continue;
+    if (!STRING_TYPES.has(node.type)) continue;
     const g = groups.get(node.name) ?? { value: node.name, count: 0, totalBytes: 0, maxBytes: 0 };
     g.count++;
     g.totalBytes += node.selfSize;

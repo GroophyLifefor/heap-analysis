@@ -34,6 +34,20 @@ test('drops values that only appear once', () => {
   assert.ok(!rows.some((r) => r.value === 'Foo'));
 });
 
+test('counts concatenated and sliced string nodes too, not just plain string', () => {
+  const json = tinySnapshot();
+  json.snapshot.node_count = 5;
+  json.nodes.push(
+    10, 2, 7, 24, 0, 0, // node 3: concatenated string "hello" (dup of node 2)
+    11, 2, 9, 24, 0, 0, // node 4: sliced string "hello" (dup of node 2)
+  );
+  const rows = findDuplicateStrings(parseSnapshot(json));
+  const hello = rows.find((r) => r.value === 'hello');
+  assert.ok(hello, 'expected a "hello" group spanning all three string node types');
+  assert.equal(hello.count, 3);
+  assert.equal(hello.totalBytes, 72);
+});
+
 test('honours top', () => {
   const json = withDuplicateString();
   const rows = findDuplicateStrings(parseSnapshot(json), { top: 0 });
