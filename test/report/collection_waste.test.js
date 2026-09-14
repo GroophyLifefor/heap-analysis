@@ -37,6 +37,16 @@ test('finds an over-allocated Map and reports its backing store capacity', () =>
   assert.ok(row.wastedBytes > 0);
 });
 
+test('usedBytes is the summed selfSize of the entries, not the backing store\'s own edgeCount', () => {
+  // Backing store selfSize 100, edgeCount 2 (two element edges), entries
+  // "a" (20 bytes) and "b" (16 bytes). A version that read edgeCount as
+  // usedBytes would compute usedBytes=2, wastedBytes=98 -- wrong on both.
+  const rows = findCollectionWaste(parseSnapshot(withMap()));
+  const row = rows.find((r) => r.constructor === 'Map');
+  assert.equal(row.usedBytes, 36);
+  assert.equal(row.wastedBytes, 64);
+});
+
 test('skips a collection with no waste', () => {
   const json = tinySnapshot();
   const rows = findCollectionWaste(parseSnapshot(json));

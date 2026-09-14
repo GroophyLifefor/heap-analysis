@@ -38,7 +38,8 @@ export function findCollectionWaste(snapshot, { top = 10 } = {}) {
     if (backing === null) continue;
 
     const capacityBytes = snapshot.node(backing).selfSize;
-    const usedBytes = snapshot.node(backing).edgeCount;
+    let usedBytes = 0;
+    for (const edge of snapshot.edgesOf(backing)) usedBytes += snapshot.node(edge.to).selfSize;
     const wastedBytes = capacityBytes - usedBytes;
     if (wastedBytes <= 0) continue;
 
