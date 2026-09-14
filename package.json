@@ -7,8 +7,12 @@
   "exports": {
     ".": "./index.js"
   },
+  "bin": {
+    "heap-analysis": "./bin/heap-analysis.js"
+  },
   "files": [
     "index.js",
+    "bin",
     "src"
   ],
   "engines": {

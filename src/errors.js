@@ -13,3 +13,8 @@ export class InvalidSnapshotError extends HeapAnalysisError {}
 /** The snapshot is well formed but an argument points outside it, such as a
  * nodeIndex past nodeCount. */
 export class OutOfRangeError extends HeapAnalysisError {}
+
+/** The CLI was invoked wrong: an unknown command, a missing required flag,
+ * an option that doesn't parse. The bin entry point catches this one (and
+ * only this one) and prints just the message, per CONTRIBUTING.md #5. */
+export class UsageError extends HeapAnalysisError {}
