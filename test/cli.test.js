@@ -41,8 +41,8 @@ test('an unknown command throws UsageError, not a bare Error', async () => {
   await assert.rejects(() => runCli(['not-a-real-command']), UsageError);
 });
 
-test('COMMANDS is empty for now, this PR is just the skeleton', () => {
-  assert.deepEqual(Object.keys(COMMANDS), []);
+test('COMMANDS has the summary command registered', () => {
+  assert.ok(typeof COMMANDS.summary === 'function');
 });
 
 test('the bin entry point runs, prints usage, and exits 0 with no command', () => {

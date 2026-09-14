@@ -1,37 +1,33 @@
-import { parseArgs } from 'node:util';
 import { readFileSync } from 'node:fs';
 import { UsageError } from './errors.js';
+import { summaryCommand } from './commands/summary.js';
 
 const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
-/** Every subcommand the CLI knows about, keyed by name. Empty for now --
- * PRs 42-45 add `summary`, `retained`, `top`, `gc-path`, `diff`, each
- * registering itself here rather than this file growing a switch statement
- * per command. */
-export const COMMANDS = {};
+/** Every subcommand the CLI knows about, keyed by name. PRs 43-45 add
+ * `retained`, `top`, `gc-path`, `diff`, each registering itself here
+ * rather than this file growing a switch statement per command. */
+export const COMMANDS = {
+  summary: summaryCommand,
+};
 
 /** Parses argv (without the `node`/script entries) and runs the matching
- * subcommand. Never throws for a usage mistake -- that becomes a
- * UsageError, which the bin entry point is the one place allowed to catch
- * and print as a bare message (CONTRIBUTING.md #5). */
+ * subcommand. Only the command name itself is parsed here -- everything
+ * after it is handed to the subcommand's own parseArgs call untouched, so
+ * a global parse can't misread a subcommand's own flags (an option this
+ * file doesn't know about, like `--file`, would otherwise get treated as a
+ * bare boolean and swallow its value as a stray positional). Never throws
+ * for a usage mistake -- that becomes a UsageError, which the bin entry
+ * point is the one place allowed to catch and print as a bare message
+ * (CONTRIBUTING.md #5). */
 export async function runCli(argv) {
-  const { positionals, values } = parseArgs({
-    args: argv,
-    allowPositionals: true,
-    strict: false,
-    options: {
-      help: { type: 'boolean', short: 'h' },
-      version: { type: 'boolean' },
-    },
-  });
-
-  if (values.version) {
+  if (argv.includes('--version')) {
     process.stdout.write(`${packageJson.version}\n`);
     return;
   }
 
-  const [command, ...rest] = positionals;
-  if (!command || values.help) {
+  const [command, ...rest] = argv;
+  if (!command || command === '--help' || command === '-h') {
     process.stdout.write(usage());
     return;
   }
