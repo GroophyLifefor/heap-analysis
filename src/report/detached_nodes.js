@@ -1,10 +1,10 @@
 /**
  * Nodes V8 itself has marked detached (detachednessOf === 2): something in
- * JS still holds a reference, but the native side it wrapped is gone. A
- * classic browser leak shape (a detached DOM element some code forgot to
- * drop); Node.js processes without a DOM rarely produce any, but the field
- * exists in every snapshot capable of tracking it, and third-party native
- * addons can set it too.
+ * JS still holds a reference, but the native side it wrapped is gone. Known
+ * best as a browser leak shape (a detached DOM element some code forgot to
+ * drop), but not only that: Node.js itself marks some of its own native
+ * wrapper handles (e.g. FSReqPromise, BindingData) this way too, verified
+ * against a real snapshot of the running test process.
  *
  * Returns decoded node objects (as node() does), largest selfSize first.
  */

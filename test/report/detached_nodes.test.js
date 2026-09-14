@@ -46,10 +46,14 @@ test('a snapshot from a V8 without a detachedness field reports nothing rather t
   assert.deepEqual(rows, []);
 });
 
-test('on a real Node.js snapshot, nothing is normally marked detached', async () => {
+test('on a real Node.js snapshot, every row really has detachedness 2', async () => {
+  // Node's own native wrapper handles (FSReqPromise, BindingData, ...) get
+  // marked detached too, it isn't only a browser DOM thing -- so this
+  // asserts the field value directly rather than assuming the list is
+  // empty outside a browser.
   await withRealSnapshot(async (file) => {
     const snap = await loadSnapshot(file);
     const rows = findDetachedNodes(snap);
-    assert.deepEqual(rows, []);
+    for (const row of rows) assert.equal(snap.detachednessOf(row.index), 2);
   });
 });
